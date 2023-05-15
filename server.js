@@ -18,7 +18,7 @@ require('dotenv').config();
 }());
 
 const corsOption = {
-    origin: ['http://localhost:5500/'],
+    origin: ['https://goldenrechargeinvestment.com/'],
 };
 
 const app = express();

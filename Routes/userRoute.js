@@ -10,7 +10,9 @@ const { UserAuthMiddleware } = require('../Middlewares/authMiddlewares');
 route.post('/register', async (req, res) => {
     try {
         const emailExist = await UserModel.findOne({ email: req.body.email });
-        const referrals = req.body.referredBy;
+        const referrals = req.body.referralCode;
+
+        console.log(referrals);
 
         if(emailExist) {
             return res.status(400).json({
@@ -23,17 +25,18 @@ route.post('/register', async (req, res) => {
             let user;
             user = await UserModel.findById(referrals);
             if(user) {
+                console.log(user);
                 updateReferralCount = await UserModel.findByIdAndUpdate(user._id, {
                     referrals: user.referrals + 1,
                     payout: user.payout + user.accountBalance,
                 });
 
                 updateReferralCount.save();
+            } else {
+                return res.status(404).json({
+                    msg: 'User with the referral code not found',
+                });
             }
-
-            res.status(404).json({
-                msg: 'User with the referral code not found',
-            });
         };
 
         const salt = await bcrypt.genSalt(10);
@@ -43,7 +46,7 @@ route.post('/register', async (req, res) => {
             name: req.body.name,
             email: req.body.email,
             password: hashedPassword,
-            referredBy: user.name,
+            referredBy: referrals,
         });
 
         const token = jwt.sign({ _id: user._id }, process.env.UserToken, { expiresIn: '24h' });
@@ -57,22 +60,29 @@ route.post('/register', async (req, res) => {
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            msg: 'Bad Request',
+        });
     }
 });
 
 route.post('/login', async (req, res) => {
     try {
+
+        console.log(req.body);
         const emailExist = await UserModel.findOne({ email: req.body.email });
 
         if(!emailExist) {
+            console.log('true');
             return res.status(404).json({
                 msg: 'Incorrect Credentials'
             });
         }
 
-        const validPassword = await bcrypt.compare(req.body.password, req.body.password);
+        const validPassword = await bcrypt.compare(req.body.password, emailExist.password);
+        console.log(validPassword);
         if (!validPassword) {
-        return res.status(400).json({ message: 'Incorrect Credentials!!'});
+        return res.status(400).json({ msg: 'Incorrect Credentials!!'});
         }
 
         const token = jwt.sign({ _id: emailExist._id }, process.env.UserToken, { expiresIn: '24h' });
@@ -95,7 +105,7 @@ route.get('/', UserAuthMiddleware, async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                accountbalance: user.accountbalance,
+                accountbalance: user.accountBalance,
                 referrals: user.referrals,
                 planTier: user.planTier,
             }
@@ -189,9 +199,11 @@ route.post('/withdraw', UserAuthMiddleware, async (req, res) => {
 route.post('/bank-verification', async (req, res) => {
     const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
+    console.log(req.body);
+
     const details = {
-    account_number: req.body.accountNumber,
-    account_bank: req.body.bank,
+        account_number: req.body.accountNumber,
+        account_bank: req.body.bank,
     };
 
     // Async and Await

@@ -10,7 +10,10 @@ const UserModel = new Schema({
         type: Number,
         default: 1,
     },
-    referrals: Number,
+    referrals: {
+        type: Number,
+        default: 0,
+    },
     accountBalance: {
         type: Number,
         default: 0,

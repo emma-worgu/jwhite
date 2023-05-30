@@ -97,6 +97,7 @@ route.post('/login', async (req, res) => {
 });
 
 route.get('/', UserAuthMiddleware, async (req, res) => {
+    console.log(req.user);
     try {
         const user = await UserModel.findById(req.user);
 
@@ -252,16 +253,21 @@ route.post('/add-bank', UserAuthMiddleware, async (req, res) => {
 route.post('/verify-payment', UserAuthMiddleware, async (req, res) => {
     try {
         const user = await UserModel.findById(req.user);
+
+        const tranx_id = req.headers['tranx-id'];
+
+        
         const options = {
             method: 'GET',
-            url: `https://api.flutterwave.com/v3/transactions/${req.body.transaction_id}/verify`,
+            url: `https://api.flutterwave.com/v3/transactions/${tranx_id}/verify`,
             headers: {
             'Content-Type': 'application/json',
-            Authorization: process.env.flutterSecKey,
+            Authorization: process.env.FLW_SECRET_KEY,
             },
         };
     
         const response = await axios(options);
+
         if (response.status !== 200) {
             return res.status(404).json({
             status: 'failed',
@@ -272,7 +278,7 @@ route.post('/verify-payment', UserAuthMiddleware, async (req, res) => {
 
         // After Successfully Verifying the Payment this will give value to the customer
         const balance = await UserModel.findByIdAndUpdate(user._id, {
-            accountBalance: req.body.amount,
+            accountBalance: response.data.data.amount,
         });
     
         balance.save();
@@ -282,6 +288,7 @@ route.post('/verify-payment', UserAuthMiddleware, async (req, res) => {
             message: 'Payment Successful',
         });
     } catch (error) {
+        console.log(error.data);
       return res.status(400).json({
         status: 'failed',
         message: 'Bad Request',

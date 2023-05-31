@@ -133,7 +133,7 @@ route.post('/withdraw', UserAuthMiddleware, async (req, res) => {
         });
     }
 
-    if(amount > payout) {
+    if(amount > user.payout) {
         return res.status(400).json({
             msg: 'Insufficient Funds'
         });
